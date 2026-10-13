@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flowers Again</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Reenie+Beanie&display=swap">
+<style>
+  /* Layout: one full-screen sheet of paper. Words sit top-left like a note pinned
+     to a sketchbook page; the garden grows up from the bottom edge. */
+  :root {
+    --paper: #E7ECE6;
+    --ink: #2B2030;
+    --ink-soft: #5E5266;
+    --accent: #C23B63;
+    --stem: #4E7B58;
+    --wash-rose: rgba(226, 120, 150, .20);
+    --wash-sky: rgba(96, 140, 210, .16);
+    --wash-gold: rgba(232, 180, 70, .14);
+    --wash-moss: rgba(110, 155, 115, .34);
+
+    --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --font-hand: "Reenie Beanie", "Segoe Print", "Bradley Hand", cursive;
+  }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-display);
+    overflow: hidden;
+  }
+
+  .sheet {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 85% 130px at 50% 100%, var(--wash-moss), transparent 100%),
+      radial-gradient(circle at 82% 18%, var(--wash-rose), transparent 42%),
+      radial-gradient(circle at 12% 68%, var(--wash-sky), transparent 38%),
+      radial-gradient(circle at 58% 48%, var(--wash-gold), transparent 30%),
+      var(--paper);
+  }
+
+  .grain, .garden {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  /* Paper grain as a small seamless tile. One full-screen turbulence filter can
+     render in uneven pieces on large or high-density screens. */
+  .grain {
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .17  0 0 0 0 .13  0 0 0 0 .19  .55 0 0 0 -.19'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: 240px 240px;
+  }
+  .garden { cursor: crosshair; touch-action: manipulation; }
+
+  /* ---------- the note ---------- */
+  .note {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding-block: clamp(20px, 5vh, 56px);
+    padding-inline: clamp(16px, 5vw, 64px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.6vh, 16px);
+    pointer-events: none;
+    animation: settle 1.6s cubic-bezier(.2, .7, .2, 1) both;
+  }
+  .note h1 {
+    margin: 0;
+    max-width: 19ch;
+    font-size: clamp(2rem, 5vw, 3.9rem);
+    font-weight: 300;
+    font-style: italic;
+    line-height: .98;
+    letter-spacing: -.02em;
+    text-wrap: balance;
+  }
+  .note .hand {
+    margin: 0;
+    max-width: 30ch;
+    font-family: var(--font-hand);
+    font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+    line-height: 1.05;
+    color: var(--ink-soft);
+    transform: rotate(-1.5deg);
+    transform-origin: left center;
+  }
+  .note .hint {
+    margin: 0;
+    max-width: 34ch;
+    font-size: .92rem;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+  .tools { display: flex; flex-wrap: wrap; gap: 20px; }
+  .tools button {
+    pointer-events: auto;
+    padding: 4px 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px dashed var(--ink-soft);
+    font: italic 400 .98rem var(--font-display);
+    color: var(--ink);
+    cursor: pointer;
+    transition: color .25s, border-color .25s;
+  }
+  .tools button:hover { color: var(--accent); border-color: var(--accent); }
+  .tools button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ---------- the drawing ---------- */
+  .stem, .blade { fill: none; stroke-linecap: round; }
+  .stem { stroke: var(--stem); }
+  .ink {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: .9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: .62;
+    vector-effect: non-scaling-stroke;
+  }
+  .ink.vein { opacity: .3; stroke-width: .7; }
+  .dot { fill: var(--ink); opacity: .5; }
+  .hit { fill: transparent; pointer-events: all; }
+
+  /* the two of them, standing in the garden */
+  .person { pointer-events: none; }
+  .figure {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: .78;
+    vector-effect: non-scaling-stroke;
+  }
+  .face { fill: var(--ink); opacity: .75; }
+  .wonder { animation: twinkle 2.6s ease-in-out infinite alternate; }
+  @keyframes twinkle {
+    from { opacity: .15; }
+    to { opacity: .7; }
+  }
+
+  .sway {
+    transform-origin: 0 0;
+    animation: sway 7s ease-in-out infinite alternate;
+  }
+  @keyframes sway {
+    from { transform: rotate(-1.4deg); }
+    to { transform: rotate(1.9deg); }
+  }
+
+  .label {
+    opacity: 0;
+    transition: opacity .6s ease;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: var(--paper);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    fill: var(--ink);
+  }
+  .label.show { opacity: 1; }
+  .label .name { font: 26px var(--font-hand); }
+  .us { pointer-events: none; }
+  .us text {
+    font: 54px var(--font-hand);
+    fill: var(--accent);
+    paint-order: stroke;
+    stroke: var(--paper);
+    stroke-width: 5px;
+    stroke-linejoin: round;
+  }
+  .us path { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .label .latin { font: italic 400 11.5px var(--font-display); fill: var(--ink-soft); }
+  .label .meaning { font: 400 11.5px var(--font-display); fill: var(--ink-soft); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sway, .note, .wonder { animation: none; }
+    .label { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<main class="sheet">
+  <div class="grain" aria-hidden="true"></div>
+
+  <svg class="garden" id="garden" role="img" aria-label="A hand-drawn garden of watercolor flowers growing from the bottom of the page"></svg>
+
+  <div class="note">
+    <h1 id="headline">I can’t get you flowers in person, so I grew you flowers here.</h1>
+    <p class="hand" id="handnote"></p>
+    <p class="hint">Tap or click anywhere on the page and a new one grows up to meet you. Rest on a bloom to read what it means.</p>
+    <div class="tools">
+      <button type="button" id="plant-one">Plant a flower</button>
+      <button type="button" id="start-over">Start over</button>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+(function () {
+  // ---- Make it yours -------------------------------------------------------
+  const CONFIG = {
+    to: "Marisol",          // her name -> "Marisol, I can’t get you flowers in person, ..."
+    from: "Mauricio",
+    note: "They never need water, and they bloom every time you visit."
+  };
+  // --------------------------------------------------------------------------
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const T = reduce ? 0 : 1; // time scale: everything simply appears when motion is reduced
+
+  const R = (a, b) => a + Math.random() * (b - a);
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  if (CONFIG.to) document.getElementById("headline").textContent = CONFIG.to + ", I can’t get you flowers in person, so I grew you flowers here.";
+  document.getElementById("handnote").textContent = CONFIG.note + (CONFIG.from ? "  — " + CONFIG.from : "");
+
+  // Pigments. Each becomes a radial gradient that is thin in the middle and
+  // pools toward the rim, the way a watercolor wash dries.
+  const PIG = {
+    rose: "#D8517C", blush: "#EE9BB0", coral: "#E86A4A", poppy: "#D93A2B",
+    sky: "#4F7FD1", periwinkle: "#7C86D9", violet: "#7B5EA7", lilac: "#A98BD0",
+    gold: "#E8A91F", butter: "#F3D26B", white: "#FFFFFF", plum: "#4A2340",
+    leaf: "#5E9468", sage: "#86A97A",
+    skinBrown: "#A9714B", skinFair: "#F2CBAE", hairBlack: "#2A1A17", hairBrown: "#6E4428"
+  };
+
+  const svg = d3.select("#garden");
+  const defs = svg.append("defs");
+  Object.entries(PIG).forEach(([key, color]) => {
+    const g = defs.append("radialGradient").attr("id", "g-" + key)
+      .attr("cx", "50%").attr("cy", "55%").attr("r", "62%");
+    const white = key === "white";
+    [[0, .42], [.6, .62], [1, .95]].forEach(([offset, alpha]) => {
+      g.append("stop").attr("offset", offset)
+        .attr("stop-color", white && offset === 1 ? "#C6D0DB" : color)
+        .attr("stop-opacity", white ? .96 : alpha);
+    });
+  });
+  const wash = key => "url(#g-" + key + ")";
+
+  const root = svg.append("g");
+  const gBlades = root.append("g");
+  const gFlowers = root.append("g");
+  const gDrift = root.append("g").style("pointer-events", "none");
+  const gLabels = root.append("g");
+
+  let W = 0, H = 0, builtH = 0, groundY = 0;
+  let flowers = [];
+
+  // A petal pointing up from the origin. `k` rounds the tip (0 = pointed, 1 = blunt).
+  // Every call wobbles a little, so no two are alike.
+  function petalPath(l, w, k, jit) {
+    jit = jit == null ? .08 : jit;
+    const q = v => v * (1 + R(-jit, jit));
+    const L = q(l), W1 = q(w), W2 = q(w), skew = R(-jit, jit) * w;
+    return "M0,0C" + (-W1) + "," + (-L * .28) + " " + (-W1 * k + skew) + "," + (-L * .98) + " " + skew + "," + (-L) +
+      "C" + (W2 * k + skew) + "," + (-L * .98) + " " + W2 + "," + (-L * .28) + " 0,0Z";
+  }
+
+  function bloom(sel, delay, ms) {
+    sel.attr("transform", "scale(0.001)")
+      .transition().delay(delay * T).duration((ms || 900) * T)
+      .ease(d3.easeBackOut.overshoot(1.3))
+      .attr("transform", "scale(1)");
+  }
+
+  // The wash and the ink line are drawn separately and never quite agree,
+  // like a line drawing coloured in by hand.
+  function addPetal(parent, angle, l, w, k, fill, delay, vein) {
+    const p = parent.append("g").attr("transform", "rotate(" + angle + ")").append("g");
+    p.append("path").attr("d", petalPath(l, w, k)).attr("fill", fill);
+    p.append("path").attr("d", petalPath(l, w, k, .1)).attr("class", "ink");
+    if (vein) {
+      p.append("path").attr("class", "ink vein")
+        .attr("d", "M0," + (-l * .12) + "Q" + R(-2.5, 2.5) + "," + (-l * .5) + " 0," + (-l * .78));
+    }
+    bloom(p, delay);
+  }
+
+  function addCenter(parent, r, fill, delay, dots) {
+    const c = parent.append("g");
+    c.append("circle").attr("r", r).attr("fill", fill);
+    c.append("circle").attr("r", r * R(.94, 1.06)).attr("cx", R(-.7, .7)).attr("class", "ink");
+    d3.range(dots || 0).forEach(() => {
+      const a = R(0, Math.PI * 2), d = Math.sqrt(Math.random()) * r * .75;
+      c.append("circle").attr("class", "dot").attr("r", .7)
+        .attr("cx", Math.cos(a) * d).attr("cy", Math.sin(a) * d);
+    });
+    bloom(c, delay, 700);
+  }
+
+  function growStroke(path, delay, ms) {
+    const len = path.node().getTotalLength();
+    path.attr("stroke-dasharray", len + " " + len).attr("stroke-dashoffset", len)
+      .transition().delay(delay * T).duration(ms * T).ease(d3.easeQuadOut)
+      .attr("stroke-dashoffset", 0);
+    return len;
+  }
+
+  // Each kind draws its own head and returns the pigment its petals shed.
+  const KINDS = {
+    daisy: {
+      name: "daisy", latin: "Bellis perennis", meaning: "loyal love",
+      hf: .8, stemW: 2, reach: 32,
+      draw(head, t, s) {
+        const n = Math.round(R(15, 21));
+        d3.range(n).forEach(i => addPetal(head, i * 360 / n + R(-4, 4), 30 * s * R(.9, 1.08), 7 * s, .75, wash("white"), t + i * 26));
+        addCenter(head, 7.5 * s, wash("gold"), t + n * 13, 9);
+        return "white";
+      }
+    },
+    cosmos: {
+      name: "cosmos", latin: "Cosmos bipinnatus", meaning: "peace and harmony",
+      hf: 1, stemW: 1.8, reach: 36,
+      draw(head, t, s) {
+        const color = pick(["rose", "blush", "lilac"]);
+        d3.range(8).forEach(i => addPetal(head, i * 45 + R(-5, 5), 34 * s * R(.92, 1.06), 17 * s, .85, wash(color), t + i * 70, true));
+        addCenter(head, 5.5 * s, wash("gold"), t + 420, 6);
+        return color;
+      }
+    },
+    poppy: {
+      name: "poppy", latin: "Papaver rhoeas", meaning: "pleasure",
+      hf: .95, stemW: 1.8, reach: 38,
+      draw(head, t, s) {
+        const color = pick(["poppy", "coral"]);
+        const start = R(0, 120);
+        d3.range(3).forEach(i => addPetal(head, start + i * 120 + R(-8, 8), 37 * s, 38 * s, .9, wash(color), t + i * 110, true));
+        d3.range(3).forEach(i => addPetal(head, start + 60 + i * 120 + R(-8, 8), 33 * s, 34 * s, .9, wash(color), t + 330 + i * 110, true));
+        addCenter(head, 6 * s, wash("plum"), t + 700, 0);
+        const ring = head.append("g");
+        d3.range(14).forEach(i => {
+          const a = i / 14 * Math.PI * 2 + R(-.1, .1), d = R(8.5, 11.5) * s;
+          ring.append("circle").attr("r", 1.3 * s).attr("fill", PIG.gold)
+            .attr("cx", Math.cos(a) * d).attr("cy", Math.sin(a) * d);
+        });
+        bloom(ring, t + 780, 700);
+        return color;
+      }
+    },
+    peony: {
+      name: "peony", latin: "Paeonia lactiflora", meaning: "a happy life together",
+      hf: .9, stemW: 2.4, reach: 40,
+      draw(head, t, s) {
+        const scheme = pick([["blush", "rose"], ["butter", "blush"], ["lilac", "violet"]]);
+        const layers = [
+          { n: 9, l: 40, w: 26, c: scheme[0] },
+          { n: 7, l: 30, w: 24, c: scheme[0] },
+          { n: 5, l: 19, w: 18, c: scheme[1] },
+          { n: 3, l: 10, w: 10, c: scheme[1] }
+        ];
+        layers.forEach((ly, j) => {
+          const start = R(0, 360);
+          d3.range(ly.n).forEach(i => addPetal(head, start + i * 360 / ly.n + R(-6, 6), ly.l * s * R(.92, 1.08), ly.w * s, .9, wash(ly.c), t + j * 280 + i * 45));
+        });
+        return scheme[0];
+      }
+    },
+    forgetmenot: {
+      name: "forget-me-not", latin: "Myosotis sylvatica", meaning: "true love",
+      hf: .5, stemW: 1.4, reach: 34, flat: true,
+      draw(head, t, s) {
+        const n = Math.round(R(6, 9));
+        d3.range(n).forEach(i => {
+          const a = (-150 + 120 * (i + .5) / n + R(-8, 8)) * Math.PI / 180, d = R(9, 28) * s;
+          const px = Math.cos(a) * d, py = Math.sin(a) * d;
+          const stalk = head.append("path").attr("class", "stem").attr("stroke-width", 1)
+            .attr("d", "M0,0Q" + (px * .2) + "," + (py * .7) + " " + px + "," + py);
+          growStroke(stalk, t + i * 60, 400);
+          const floret = head.append("g").attr("transform", "translate(" + px + "," + py + ")");
+          const color = pick(["sky", "sky", "periwinkle"]), start = R(0, 72);
+          d3.range(5).forEach(k => addPetal(floret, start + k * 72, 7.5 * s, 8 * s, .95, wash(color), t + 350 + i * 90 + k * 30));
+          addCenter(floret, 1.8 * s, PIG.butter, t + 550 + i * 90, 0);
+        });
+        return "sky";
+      }
+    },
+    lavender: {
+      name: "lavender", latin: "Lavandula angustifolia", meaning: "devotion",
+      hf: .85, stemW: 1.5, reach: 26, flat: true, spike: 64,
+      draw(head, t, s) {
+        const spine = head.append("path").attr("class", "stem").attr("stroke-width", 1.3)
+          .attr("d", "M0,0Q" + R(-3, 3) + "," + (-34 * s) + " 0," + (-62 * s));
+        growStroke(spine, t - 200, 700);
+        const n = 14;
+        d3.range(n).forEach(i => {
+          const y = -(6 + i * 4.3) * s, side = i % 2 ? 1 : -1;
+          const angle = i === n - 1 ? 0 : side * R(38, 68) * (1 - i / n * .45);
+          const bud = head.append("g").attr("transform", "translate(0," + y + ")");
+          addPetal(bud, angle, (10 - i * .28) * s, 5.5 * s, .7, wash(pick(["violet", "lilac", "periwinkle"])), t + i * 65);
+        });
+        return "lilac";
+      }
+    }
+  };
+  const KIND_NAMES = Object.keys(KINDS);
+
+  function addLeaf(parent, stemNode, len, f, side, size, delay) {
+    const P = stemNode.getPointAtLength(len * f), P2 = stemNode.getPointAtLength(len * f + 2);
+    const along = Math.atan2(P2.y - P.y, P2.x - P.x) * 180 / Math.PI;
+    const ll = R(24, 44) * size, lw = ll * R(.3, .42);
+    const leaf = parent.append("g")
+      .attr("transform", "translate(" + P.x + "," + P.y + ") rotate(" + (along + side * R(32, 62)) + ")")
+      .append("g");
+    const shape = j => "M0,0C" + (ll * .25) + "," + (-lw * j) + " " + (ll * .75) + "," + (-lw * .9) + " " + ll + ",0C" +
+      (ll * .7) + "," + (lw * .55 * j) + " " + (ll * .25) + "," + (lw * .7) + " 0,0Z";
+    leaf.append("path").attr("d", shape(1)).attr("fill", wash(pick(["leaf", "sage"])));
+    leaf.append("path").attr("d", shape(R(.88, 1.12))).attr("class", "ink");
+    leaf.append("path").attr("class", "ink vein").attr("d", "M0,0Q" + (ll * .5) + "," + (-lw * .14) + " " + (ll * .92) + ",0");
+    leaf.attr("transform", "scale(0.001)")
+      .transition().delay(delay * T).duration(1000 * T).ease(d3.easeCubicOut)
+      .attr("transform", "scale(1)");
+  }
+
+  function plant(x, headY, kindName, opts) {
+    opts = opts || {};
+    const kind = KINDS[kindName];
+    const d0 = opts.delay || 0;
+    let h = Math.max(50, groundY - headY);
+    const s = clamp(h / 250, .58, 1.12) * R(.92, 1.08) * (W < 520 ? .88 : 1);
+    if (kind.spike) h = Math.max(30, h - kind.spike * s);
+    const lean = R(-.12, .12) * h;
+    const growMs = clamp(h * 6, 900, 2400);
+
+    const g = gFlowers.append("g").attr("class", "flower").attr("transform", "translate(" + x + "," + groundY + ")");
+    const sway = g.append("g").attr("class", "sway")
+      .style("animation-duration", R(5, 9) + "s")
+      .style("animation-delay", -R(0, 9) + "s");
+
+    const pts = [[0, 0], [lean * .1 + R(-5, 5), -h * .35], [lean * .6 + R(-7, 7), -h * .7], [lean, -h]];
+    const stem = sway.append("path").attr("class", "stem")
+      .attr("stroke-width", kind.stemW * clamp(s, .8, 1.1))
+      .attr("d", d3.line().curve(d3.curveNatural)(pts));
+    const len = growStroke(stem, d0, growMs);
+
+    const nLeaves = h < 90 ? 1 : h < 200 ? 2 : Math.round(R(2, 3.4));
+    const firstSide = Math.random() < .5 ? 1 : -1;
+    d3.range(nLeaves).forEach(i => {
+      const f = .16 + (i + R(.2, .8)) * (.5 / nLeaves);
+      // The stem eases out, so the tip reaches fraction f at 1 - sqrt(1 - f) of the way through.
+      addLeaf(sway, stem.node(), len, f, i % 2 ? firstSide : -firstSide, s, d0 + growMs * (1 - Math.sqrt(1 - f)));
+    });
+
+    const head = sway.append("g").attr("transform",
+      "translate(" + lean + "," + (-h) + ") rotate(" + (kind.flat ? R(-7, 7) : R(-20, 20)) + ") scale(1," + (kind.flat ? 1 : R(.78, 1)) + ")");
+    const tBloom = d0 + growMs * .8;
+    const color = kind.draw(head, tBloom, s);
+
+    // Field-notebook label, shown on hover and once when a flower is planted by hand.
+    const hx = x + lean, hy = groundY - h - (kind.spike ? kind.spike * s * .5 : 0);
+    const right = hx < W - 190;
+    const label = gLabels.append("g").attr("class", "label")
+      .attr("text-anchor", right ? "start" : "end")
+      .attr("transform", "translate(" + (hx + (right ? 1 : -1) * (kind.reach * s + 10)) + "," + Math.max(34, hy - 4) + ")");
+    label.append("text").attr("class", "name").text(kind.name);
+    label.append("text").attr("class", "latin").attr("y", 16).text(kind.latin);
+    label.append("text").attr("class", "meaning").attr("y", 31).text("means " + kind.meaning);
+
+    head.append("circle").attr("class", "hit").attr("r", kind.reach * s)
+      .attr("cy", kind.spike ? -kind.spike * s * .5 : 0)
+      .on("pointerenter", () => label.classed("show", true))
+      .on("pointerleave", () => label.classed("show", false));
+
+    if (opts.announce) {
+      const up = tBloom * T + 500 * T;
+      setTimeout(() => label.classed("show", true), up);
+      setTimeout(() => label.classed("show", false), up + 3800);
+    }
+
+    flowers.push({ g, label, x: hx, y: hy, color: PIG[color], bloomsAt: Date.now() + (tBloom + 1200) * T });
+    if (flowers.length > 38) {
+      const old = flowers.shift();
+      old.label.remove();
+      old.g.transition().duration(900 * T).style("opacity", 0).remove();
+    }
+  }
+
+  // A stick figure, feet at the origin, about 110 units tall. `look` is the way
+  // the face turns (-1 left, 1 right); `hand` is the side holding the other's hand.
+  function drawPerson(x, size, who, look, hand, delay) {
+    const girl = who === "girl";
+    const g = gFlowers.append("g").attr("class", "person")
+      .attr("transform", "translate(" + x + "," + groundY + ") scale(" + size + ")")
+      .style("opacity", 0);
+    g.transition().delay(delay * T).duration(1400 * T).style("opacity", 1);
+    const ink = (parent, d) => parent.append("path").attr("class", "figure").attr("d", d);
+
+    // clothes first, so the lines sit on top of the wash
+    if (girl) {
+      g.append("path").attr("fill", wash("rose"))
+        .attr("d", "M-5,-76C-9,-62 -14,-50 -16,-40Q0,-36 16,-40C14,-50 9,-62 5,-76Z");
+      ink(g, "M-5,-75.5C-9.5,-62 -14,-50 -16.5,-40.5Q0,-35.5 15.5,-39.5C14,-51 9,-62 5.5,-76");
+      // a band of embroidery along the hem
+      ["gold", "sky", "leaf", "gold", "coral", "sky", "leaf"].forEach((c, i) => {
+        g.append("circle").attr("r", 1.3).attr("fill", PIG[c]).attr("opacity", .85)
+          .attr("cx", -12 + i * 4).attr("cy", -41.5 + Math.abs(i - 3) * .35);
+      });
+      ink(g, "M-5,-39L-6,0M5,-39L6.5,0");
+      ink(g, "M-6,0L-9.5,.5M6.5,0L10,.5");
+    } else {
+      g.append("path").attr("fill", wash("sky"))
+        .attr("d", "M-7,-79L7,-79L9,-52L-9,-52Z");
+      g.append("path").attr("fill", wash("plum")).attr("opacity", .55)
+        .attr("d", "M-9,-53L9,-53L10,-38L1,-38L0,-46L-1,-38L-10,-38Z");
+      ink(g, "M0,-82L0,-46");
+      ink(g, "M0,-46L-7,0M0,-46L7,0");
+      ink(g, "M-7,0L-10.5,.5M7,0L10.5,.5");
+    }
+
+    // one hand reaches for the other's, the other lifts toward the flowers
+    ink(g, "M0,-74Q" + (hand * 9) + ",-64 " + (hand * 16) + ",-54");
+    ink(g, "M0,-74Q" + (-hand * 13) + ",-78 " + (-hand * 17) + ",-98");
+    g.append("circle").attr("class", "face").attr("r", 1.4).attr("cx", -hand * 17).attr("cy", -98.5);
+
+    // the head tips back to look up
+    const head = g.append("g").attr("transform", "translate(0,-93) rotate(" + (look * 14) + ")");
+    if (girl) {
+      // two braids, tied with ribbons
+      [-1, 1].forEach(side => {
+        head.append("path").attr("fill", "none").attr("stroke", PIG.hairBlack).attr("stroke-width", 3.2)
+          .attr("stroke-linecap", "round").attr("opacity", .82)
+          .attr("d", "M" + (side * 8.5) + ",2Q" + (side * 12) + ",9 " + (side * 9.5) + ",14T" + (side * 11) + ",23");
+        head.append("path").attr("fill", wash("coral"))
+          .attr("d", "M" + (side * 11) + ",22l-3,2.5l0,-4Zm0,0l3,2.5l0,-4Z");
+      });
+    }
+    head.append("circle").attr("r", 10).attr("fill", wash(girl ? "skinBrown" : "skinFair"));
+    head.append("circle").attr("r", 10 * R(.96, 1.04)).attr("cx", R(-.5, .5)).attr("class", "figure");
+    if (girl) {
+      head.append("path").attr("fill", wash("hairBlack"))
+        .attr("d", "M-10.6,1C-12,-13 12,-13.5 10.6,1C9,-5 3,-7.5 0,-6.5C-3,-7.5 -9,-5 -10.6,1Z");
+      // a flower tucked behind her ear
+      const tuck = head.append("g").attr("transform", "translate(" + (-look * 8) + ",-7)");
+      d3.range(5).forEach(i => addPetal(tuck, i * 72, 4.6, 4.2, .9, wash("poppy"), delay + 900 + i * 60));
+      addCenter(tuck, 1.3, PIG.butter, delay + 1300, 0);
+    } else {
+      head.append("path").attr("fill", wash("hairBrown"))
+        .attr("d", "M-10.2,-2C-11.5,-13 10,-14.5 10.4,-3C7,-7 4,-6 2,-9C0,-6 -4,-8 -6,-5C-7,-6 -9,-5 -10.2,-2Z");
+      ink(head, "M-2,-10.5Q0,-14 3,-12.5");
+    }
+    // wide eyes, raised brows, a little round "oh"
+    [-1, 1].forEach(side => {
+      head.append("circle").attr("class", "face").attr("r", 1.1).attr("cx", look * 2 + side * 3.6).attr("cy", -1.5);
+      ink(head, "M" + (look * 2 + side * 3.6 - 1.8) + ",-4.8Q" + (look * 2 + side * 3.6) + ",-6.6 " + (look * 2 + side * 3.6 + 1.8) + ",-4.8");
+      head.append("circle").attr("r", 1.9).attr("fill", PIG.rose).attr("opacity", .22).attr("cx", side * 6.3).attr("cy", 2.6);
+    });
+    head.append("ellipse").attr("class", "figure").attr("rx", 1.4).attr("ry", 1.9).attr("cx", look * 1.6).attr("cy", 4.4);
+
+    // little marks of wonder
+    const w = head.append("g").attr("class", "wonder").style("animation-delay", -R(0, 3) + "s");
+    [-34, -10, 14].forEach(a => {
+      const r1 = 14, r2 = 18.5, t = (a + look * 18 - 90) * Math.PI / 180;
+      ink(w, "M" + (Math.cos(t) * r1) + "," + (Math.sin(t) * r1) + "L" + (Math.cos(t) * r2) + "," + (Math.sin(t) * r2));
+    });
+    return g;
+  }
+
+  // Them, holding hands, plus a few blades in front so they stand in the garden.
+  function drawPair(cx, size, delay) {
+    const hands = 16 * size;
+    drawPerson(cx - hands - 1, size, "girl", -1, 1, delay);
+    drawPerson(cx + hands + 1, size * 1.04, "boy", 1, -1, delay + 250);
+    d3.range(9).forEach(() => {
+      const x = cx + R(-34, 34) * size, bh = R(8, 20) * size, bend = R(-8, 8);
+      const blade = gFlowers.append("path").attr("class", "blade")
+        .attr("stroke", pick([PIG.leaf, PIG.sage, "#4E7B58"]))
+        .attr("stroke-width", R(1, 1.6)).attr("opacity", R(.5, .85))
+        .attr("d", "M" + x + "," + (groundY + R(2, 8)) + "q" + (bend * .2) + "," + (-bh * .6) + " " + bend + "," + (-bh));
+      growStroke(blade, delay + R(0, 800), R(600, 1100));
+    });
+
+    // "us", with a hand-drawn arrow down to the two of them. It sits on the
+    // labels layer so no flower covers it, and flips left near the right edge.
+    const side = cx + 120 * size < W - 40 ? 1 : -1;
+    const tip = [cx + side * 2 * size, groundY - 99 * size]; // the gap between their faces
+    const tx = cx + side * 66 * size, ty = groundY - 172 * size;
+    const us = gLabels.append("g").attr("class", "us");
+    const arrow = us.append("path").attr("d",
+      "M" + (tx - side * 6) + "," + (ty + 8) +
+      "C" + (tx - side * 4) + "," + (ty + 40 * size) + " " + (tip[0] + side * 16 * size) + "," + (tip[1] - 26 * size) + " " + tip[0] + "," + tip[1]);
+    const len = growStroke(arrow, delay + 1600, 900);
+    const node = arrow.node(), end = node.getPointAtLength(len), before = node.getPointAtLength(len - 6);
+    const a = Math.atan2(end.y - before.y, end.x - before.x);
+    const head = us.append("path").attr("d",
+      [a + 2.6, a - 2.6].map(b => "M" + end.x + "," + end.y + "l" + (Math.cos(b) * 10) + "," + (Math.sin(b) * 10)).join(""))
+      .style("opacity", 0);
+    head.transition().delay((delay + 2450) * T).duration(250 * T).style("opacity", 1);
+    us.append("text").attr("x", tx).attr("y", ty).attr("text-anchor", "middle")
+      .attr("transform", "rotate(" + (-side * 6) + " " + tx + "," + ty + ")")
+      .text("us").style("opacity", 0)
+      .transition().delay((delay + 1300) * T).duration(700 * T).style("opacity", 1);
+  }
+
+  function drawGrass() {
+    const n = Math.round(W / 13);
+    d3.range(n).forEach(i => {
+      const x = (i + R(0, 1)) * W / n, bh = R(10, 46), bend = R(-14, 14);
+      const blade = gBlades.append("path").attr("class", "blade")
+        .attr("stroke", pick([PIG.leaf, PIG.sage, "#4E7B58"]))
+        .attr("stroke-width", R(.9, 1.7)).attr("opacity", R(.4, .8))
+        .attr("d", "M" + x + "," + (groundY + R(0, 10)) + "q" + (bend * .2) + "," + (-bh * .6) + " " + bend + "," + (-bh));
+      growStroke(blade, R(0, 1600), R(700, 1400));
+    });
+  }
+
+  function measure() {
+    const box = svg.node().getBoundingClientRect();
+    W = box.width; H = box.height;
+  }
+
+  function growGarden() {
+    gBlades.selectAll("*").interrupt().remove();
+    gFlowers.selectAll("*").interrupt().remove();
+    gDrift.selectAll("*").interrupt().remove();
+    gLabels.selectAll("*").remove();
+    flowers = [];
+    measure();
+    builtH = H;
+    groundY = H - 26;
+    root.attr("transform", null);
+    drawGrass();
+
+    const n = clamp(Math.round(W / 95), 5, 15);
+    const maxH = Math.min(H * .58, 470), minH = Math.max(95, H * .22);
+    const order = d3.shuffle(KIND_NAMES.slice());
+    const margin = Math.min(40, W * .06);
+    const beds = d3.range(n).map(i => {
+      const kind = order[i % order.length];
+      return {
+        kind,
+        x: margin + (W - 2 * margin) * (i + .5) / n + R(-.28, .28) * (W / n),
+        h: R(minH, maxH) * KINDS[kind].hf,
+        delay: 350 + R(0, n * 190)
+      };
+    });
+    // The two of them stand among the flowers. Anything planted right where they
+    // stand grows behind them; everything else goes tallest first, so the short
+    // ones stand in front.
+    const size = clamp(H * .2, 80, 150) / 110;
+    const cx = W < 520 ? W * .5 : W * .58;
+    const behind = b => Math.abs(b.x - cx) < 34 * size;
+    // ...and tall enough to bloom above their heads, not over their faces.
+    beds.forEach(b => { if (behind(b)) b.h = Math.max(b.h, 165 * size); });
+    beds.sort((a, b) => (behind(b) - behind(a)) || (b.h - a.h));
+    const nBehind = beds.filter(behind).length;
+    beds.forEach((b, i) => {
+      if (i === nBehind) drawPair(cx, size, 900);
+      plant(b.x, groundY - b.h, b.kind, { delay: b.delay });
+    });
+    if (nBehind === beds.length) drawPair(cx, size, 900);
+  }
+
+  // Now and then a petal lets go.
+  function shedPetal() {
+    if (document.hidden) return;
+    const ready = flowers.filter(f => f.bloomsAt < Date.now());
+    if (!ready.length || gDrift.selectAll("path").size() > 7) return;
+    const f = pick(ready);
+    const drift = R(-90, 90), phase = R(0, 6), spin = R(-300, 300), r0 = R(0, 360), fall = groundY - f.y + 4;
+    gDrift.append("path").attr("d", petalPath(10, 6, .8)).attr("fill", f.color).attr("stroke", "#2B2030").attr("stroke-width", .4).attr("stroke-opacity", .35)
+      .transition().duration(R(5200, 8200)).ease(d3.easeLinear)
+      .attrTween("transform", () => t =>
+        "translate(" + (f.x + drift * t + Math.sin(t * Math.PI * 3 + phase) * 18) + "," + (f.y + fall * t * (.4 + .6 * t)) + ") rotate(" + (r0 + spin * t) + ")")
+      .styleTween("opacity", () => t => t < .8 ? .78 : .78 * (1 - (t - .8) / .2))
+      .remove();
+  }
+
+  // Listen on the whole sheet rather than the svg, so a click plants a flower
+  // no matter which layer happens to be on top.
+  d3.select(".sheet").on("click", event => {
+    if (event.target.closest && event.target.closest("button")) return;
+    const box = svg.node().getBoundingClientRect();
+    const px = event.clientX - box.left, py = event.clientY - box.top - (box.height - builtH);
+    plant(clamp(px, 12, W - 12), clamp(py, 44, groundY - 60), pick(KIND_NAMES), { announce: true });
+  });
+
+  d3.select("#plant-one").on("click", () => {
+    plant(R(W * .08, W * .92), groundY - R(Math.max(95, H * .22), Math.min(H * .55, 440)), pick(KIND_NAMES), { announce: true });
+  });
+  d3.select("#start-over").on("click", growGarden);
+
+  // A new width means a new garden; a new height (phone toolbars) just slides the ground.
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const oldW = W;
+      measure();
+      if (Math.abs(W - oldW) > 40) growGarden();
+      else root.attr("transform", "translate(0," + (H - builtH) + ")");
+    }, 250);
+  });
+
+  growGarden();
+  if (!reduce) d3.interval(shedPetal, 2400);
+})();
+</script>
+</body>
+</html>
